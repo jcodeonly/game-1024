@@ -6,7 +6,10 @@ import type { Direction, GameStatus } from "@/game/types";
 import { BoardView } from "./BoardView";
 import { HeaderStats } from "./HeaderStats";
 import { RotationGauge } from "./RotationGauge";
+import { VictoryModal } from "./VictoryModal";
+import { GameOverModal } from "./GameOverModal";
 import { useGameInput } from "@/hooks/useGameInput";
+import { getBestMoves, saveBestMoves } from "@/utils/storage";
 
 interface GameContainerProps {
   /** 외부 웹서비스 임베드 시 추가 스타일링 클래스 */
@@ -15,7 +18,7 @@ interface GameContainerProps {
 
 /**
  * 1024 스페셜 게임 최상위 인터랙티브 컨테이너 (클라이언트 컴포넌트)
- * GameEngine 인스턴스와 React 상태를 동기화하고 키보드/터치 입력을 바인딩합니다.
+ * GameEngine 인스턴스와 React 상태를 동기화하고 키보드/터치 입력 및 승리/패배 모달을 제어합니다.
  */
 export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) => {
   // 1. 객체지향 GameEngine 인스턴스 초기화
@@ -27,18 +30,11 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
   const [rotationDegree, setRotationDegree] = useState<number>(0);
   const [status, setStatus] = useState<GameStatus>("PLAYING");
   const [bestMoves, setBestMoves] = useState<number | null>(null);
+  const [isNewRecord, setIsNewRecord] = useState<boolean>(false);
 
   // 로컬스토리지에서 최저 이동 기록 불러오기
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("game1024_best_moves");
-      if (saved) {
-        const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed)) setBestMoves(parsed);
-      }
-    } catch {
-      // SSR or restricted iframe fallback
-    }
+    setBestMoves(getBestMoves());
   }, []);
 
   // 보드 컨테이너 DOM 참조 (터치 스와이프 리스너 등록용)
@@ -46,24 +42,18 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
 
   // 3. 엔진 상태를 React 상태로 동기화하는 함수
   const syncEngineState = useCallback(() => {
-    setMoves(engine.getMoveCount());
+    const currentMoves = engine.getMoveCount();
+    setMoves(currentMoves);
     setRemainingToRotate(engine.getRemainingMovesUntilRotation());
     setRotationDegree(engine.getBoardRotationDegree());
     const currentStatus = engine.getStatus();
     setStatus(currentStatus);
 
-    // 승리 시 최저 기록 갱신 처리
+    // 승리 시 최저 기록(Personal Best) 갱신 처리
     if (currentStatus === "WON") {
-      const currentMoves = engine.getMoveCount();
-      setBestMoves((prev) => {
-        if (prev === null || currentMoves < prev) {
-          try {
-            localStorage.setItem("game1024_best_moves", currentMoves.toString());
-          } catch {}
-          return currentMoves;
-        }
-        return prev;
-      });
+      const { isNewRecord: newRecord, bestMoves: updatedBest } = saveBestMoves(currentMoves);
+      setIsNewRecord(newRecord);
+      setBestMoves(updatedBest);
     }
   }, [engine]);
 
@@ -81,6 +71,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
   // 5. 새 게임 재시작 핸들러
   const handleNewGame = useCallback(() => {
     engine.restart();
+    setIsNewRecord(false);
     syncEngineState();
   }, [engine, syncEngineState]);
 
@@ -93,7 +84,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
   return (
     <div
       ref={containerRef}
-      className={`w-full max-w-sm mx-auto flex flex-col items-center justify-between gap-3 select-none no-scroll-touch ${className}`}
+      className={`w-full max-w-sm mx-auto flex flex-col items-center justify-between gap-3 select-none no-scroll-touch relative ${className}`}
     >
       {/* 상단 스탯 헤더 (STAGE 1024, 현재 이동 수, 최고 기록, 재시작 버튼) */}
       <HeaderStats moves={moves} bestMoves={bestMoves} onNewGame={handleNewGame} />
@@ -108,6 +99,21 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
       <div className="w-full text-center text-xs text-slate-500 py-1">
         <span>화면 스와이프 또는 방향키(WASD)로 조작</span>
       </div>
+
+      {/* 승리 팝업 모달 */}
+      {status === "WON" && (
+        <VictoryModal
+          moves={moves}
+          bestMoves={bestMoves}
+          isNewRecord={isNewRecord}
+          onRestart={handleNewGame}
+        />
+      )}
+
+      {/* 게임 오버 팝업 모달 */}
+      {status === "GAME_OVER" && (
+        <GameOverModal moves={moves} onRestart={handleNewGame} />
+      )}
     </div>
   );
 };
