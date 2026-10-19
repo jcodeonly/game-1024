@@ -44,4 +44,14 @@ describe("TileView 및 BoardView 컴포넌트", () => {
     const boardElement = container.querySelector(".game-board-container");
     expect(boardElement?.getAttribute("style")).toContain("rotate(180deg)");
   });
+
+  it("BoardView에 tiles prop을 직접 전달했을 때 해당 타일들을 정확히 렌더링해야 한다", () => {
+    const directTiles = [
+      new Tile(4, 2, 3),
+      new Tile(2, 2, 0),
+    ];
+    render(<BoardView tiles={directTiles} boardRotationDegree={0} />);
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
 });

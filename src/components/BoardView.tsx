@@ -2,11 +2,14 @@
 
 import React from "react";
 import { Board } from "@/game/Board";
+import { Tile } from "@/game/Tile";
 import { TileView } from "./TileView";
 
 interface BoardViewProps {
-  /** 렌더링할 Board 인스턴스 */
-  board: Board;
+  /** 렌더링할 Board 인스턴스 (선택적) */
+  board?: Board;
+  /** 직접 전달하는 타일 목록 (상태 기반 렌더링용, 선택적) */
+  tiles?: Tile[];
   /** 보드 회전 각도 (0, 90, 180, 270, ...) */
   boardRotationDegree: number;
 }
@@ -16,8 +19,8 @@ interface BoardViewProps {
  * 모바일 작은 화면에서도 가로 세로 1:1 비율을 유지하고,
  * 100턴 회전 시 컨테이너 전체를 90도 시계방향으로 부드럽게 회전시킵니다.
  */
-export const BoardView: React.FC<BoardViewProps> = ({ board, boardRotationDegree }) => {
-  const tiles = board.getAllTiles();
+export const BoardView: React.FC<BoardViewProps> = ({ board, tiles, boardRotationDegree }) => {
+  const renderedTiles = tiles ?? board?.getAllTiles() ?? [];
 
   // 보드 전체 회전 애니메이션 스타일
   const boardRotationStyle = {
@@ -47,7 +50,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ board, boardRotationDegree
 
         {/* 2. 실제 타일 레이어 (절대 좌표 오버레이) */}
         <div className="absolute inset-2 pointer-events-none">
-          {tiles.map((tile) => (
+          {renderedTiles.map((tile) => (
             <TileView
               key={tile.id}
               tile={tile}
