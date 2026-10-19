@@ -34,3 +34,6 @@ next-env.d.ts
 
 # superpowers & brainstorm temporary files
 .superpowers/
+
+# reference documentation
+/reference/

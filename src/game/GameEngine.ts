@@ -62,6 +62,7 @@ export class GameEngine {
   /**
    * 사용자의 방향 입력을 처리합니다.
    * @param direction 이동 방향 (UP, DOWN, LEFT, RIGHT)
+   * @param direction 이동 방향 (UP, DOWN, LEFT, RIGHT - 시각적 방향)
    * @returns 실제로 이동이 수행되었는지 여부
    */
   public handleMove(direction: Direction): boolean {
@@ -69,7 +70,10 @@ export class GameEngine {
       return false;
     }
 
-    const { moved } = this.board.slide(direction);
+    // 100턴 회전 시에도 유저 시점(화면에 보이는 방향) 그대로 슬라이드되도록 방향 보정
+    const internalDir = this.mapVisualDirection(direction);
+
+    const { moved } = this.board.slide(internalDir);
     if (!moved) {
       return false;
     }
@@ -83,9 +87,8 @@ export class GameEngine {
       return true;
     }
 
-    // 3. 100턴 회전 기믹 검사: 누적 이동 수가 100의 배수일 때 발동
+    // 3. 100턴 회전 기믹 검사: 누적 이동 수가 100의 배수일 때 발동 (UI 보드 90도 시계방향 회전)
     if (this.moveCount % this.rotateInterval === 0) {
-      this.board.rotateClockwise90();
       this.rotationCount++;
       this.boardRotationDegree += 90;
     }
@@ -105,6 +108,19 @@ export class GameEngine {
     }
 
     return true;
+  }
+
+  /**
+   * 화면에 보이는 시각적 방향을 현재 보드 회전 각도에 맞추어 보드 내부 좌표계 방향으로 변환합니다.
+   * 보드가 90도 회전한 상태에서도 유저의 조작(화살표/스와이프)은 시각적으로 보이는 방향 그대로 직관적으로 적용됩니다.
+   * @param visualDir 유저가 입력한 시각적 방향
+   */
+  public mapVisualDirection(visualDir: Direction): Direction {
+    const DIRS: Direction[] = ["UP", "RIGHT", "DOWN", "LEFT"];
+    const steps = Math.floor(((this.boardRotationDegree % 360) + 360) % 360 / 90);
+    const visualIndex = DIRS.indexOf(visualDir);
+    const targetIndex = (visualIndex - steps + 4) % 4;
+    return DIRS[targetIndex];
   }
 
   /**

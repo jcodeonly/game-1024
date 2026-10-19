@@ -114,6 +114,11 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
         <span>화면 스와이프 또는 방향키(WASD)로 조작</span>
       </div>
 
+      {/* 현재 게임 버전 표시 */}
+      <div className="w-full text-center text-[11px] text-slate-600 font-mono tracking-widest -mt-1 pb-1">
+        v1.0.2
+      </div>
+
       {/* 승리 팝업 모달 */}
       {status === "WON" && (
         <VictoryModal
