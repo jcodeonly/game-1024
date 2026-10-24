@@ -116,7 +116,7 @@ export const GameContainer: React.FC<GameContainerProps> = ({ className = "" }) 
 
       {/* 현재 게임 버전 표시 */}
       <div className="w-full text-center text-[11px] text-slate-600 font-mono tracking-widest -mt-1 pb-1">
-        v1.0.2
+        v1.0.3
       </div>
 
       {/* 승리 팝업 모달 */}
